@@ -6,19 +6,25 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 2em auto; }
-    .choice-group { margin-bottom: 1.5em; }
-    .choice-group label { margin-right: 2em; } /* 選択肢間隔 */
-    #resultLink { margin-top: 2em; }
+    body { font-family: sans-serif; max-width: 640px; margin: 2em auto; }
+    .choice-group { margin-bottom: 1.2em; display:flex; align-items:center; gap:0.8em; }
+    .choice-group strong { width: 110px; flex: 0 0 110px; }
+    .choice-group label { margin-right: 2em; display:flex; align-items:center; gap:0.4em; }
+    #resultLink { margin-top: 1.5em; }
+    button { padding: 8px 12px; margin-top: 12px; }
   </style>
 </head>
 <body>
   <h1 id="title">読み込み中...</h1>
+
   <label>あなたの名前:
     <select id="user"></select>
   </label>
+
   <form id="form"></form>
-  <button onclick="submitAnswer()">送信</button>
+
+  <button id="submitBtn" onclick="submitAnswer()">送信</button>
+
   <div id="resultLink"></div>
 
   <script>
@@ -35,12 +41,10 @@
     const db = firebase.database();
     const id = new URLSearchParams(location.search).get("id");
 
-    // 🔑 URLセーフ Base64 エンコード/デコード
+    // URLセーフ Base64
     function encodeKey(str) {
       return btoa(unescape(encodeURIComponent(str)))
-             .replace(/\+/g, '-')
-             .replace(/\//g, '_')
-             .replace(/=+$/, '');
+             .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
     function decodeKey(str) {
       str = str.replace(/-/g, '+').replace(/_/g, '/');
@@ -48,60 +52,89 @@
       return decodeURIComponent(escape(atob(str)));
     }
 
-    db.ref("events/" + id).once("value").then(snap => {
-      const event = snap.val();
-      if (!event) {
-        document.getElementById("title").textContent = "イベントが見つかりません";
+    // ページ初期化
+    (function init(){
+      if (!id) {
+        document.getElementById("title").textContent = "イベントIDが指定されていません";
         return;
       }
-      document.getElementById("title").textContent = event.name;
-
-      // 名前ドロップダウン
-      const userSel = document.getElementById("user");
-      event.names.forEach(name => {
-        const opt = document.createElement("option");
-        opt.value = encodeKey(name);
-        opt.textContent = name;
-        userSel.appendChild(opt);
-      });
-
-      // 候補日ラジオ
-      const form = document.getElementById("form");
-      event.dates.forEach(date => {
-        const div = document.createElement("div");
-        div.className = "choice-group";
-        const label = document.createElement("strong");
-        label.textContent = date + ":";
-        div.appendChild(label);
-        ["◯","△","×"].forEach(opt => {
-          const subLabel = document.createElement("label");
-          const radio = document.createElement("input");
-          radio.type = "radio"; radio.name = date; radio.value = opt;
-          subLabel.appendChild(radio);
-          subLabel.append(opt);
-          div.appendChild(subLabel);
-        });
-        form.appendChild(div);
-      });
-
-      // 結果ページリンク
-      const base = location.origin + location.pathname.replace("event.html","");
+      // 結果リンクを先に表示
+      const base = location.origin + location.pathname.replace("event.html", "");
       const resultUrl = base + "result.html?id=" + id;
       document.getElementById("resultLink").innerHTML =
         `<p>回答結果はこちら: <a href="${resultUrl}" target="_blank">${resultUrl}</a></p>`;
-    });
 
+      // イベント読み込み
+      db.ref("events/" + id).once("value")
+        .then(snap => {
+          const event = snap.val();
+          if (!event) {
+            document.getElementById("title").textContent = "イベントが見つかりません";
+            return;
+          }
+          document.getElementById("title").textContent = event.name;
+
+          // 名前ドロップダウン（value は encodeKey）
+          const userSel = document.getElementById("user");
+          (event.names || []).forEach(name => {
+            const opt = document.createElement("option");
+            opt.value = encodeKey(name);
+            opt.textContent = name;
+            userSel.appendChild(opt);
+          });
+
+          // 日付ごとのラジオを作成
+          const form = document.getElementById("form");
+          (event.dates || []).forEach(date => {
+            const div = document.createElement("div");
+            div.className = "choice-group";
+            const label = document.createElement("strong");
+            label.textContent = date + ":";
+            div.appendChild(label);
+            ["◯","△","×"].forEach(opt => {
+              const subLabel = document.createElement("label");
+              const radio = document.createElement("input");
+              radio.type = "radio"; radio.name = date; radio.value = opt;
+              subLabel.appendChild(radio);
+              subLabel.append(opt);
+              div.appendChild(subLabel);
+            });
+            form.appendChild(div);
+          });
+        })
+        .catch(err => {
+          console.error("イベント読み込み失敗:", err);
+          document.getElementById("title").textContent = "イベント読み込みエラー（コンソール参照）";
+        });
+    })();
+
+    // 送信（answers を配列で保存する）
     function submitAnswer() {
       const form = document.getElementById("form");
       const userKey = document.getElementById("user").value;
+      if (!userKey) { alert("名前を選択してください"); return; }
       const userName = decodeKey(userKey);
-      const answers = {};
+
+      // answersArray にする（キーを日付文字列にしない）
+      const answersArray = [];
       for (let i=0;i<form.elements.length;i++){
         const el = form.elements[i];
-        if(el.checked) answers[el.name] = el.value;
+        if (el.type === 'radio' && el.checked) {
+          answersArray.push({ date: el.name, answer: el.value });
+        }
       }
-      db.ref("events/" + id + "/answers/" + userKey).set(answers)
-        .then(()=>alert(userName+" さんの回答が送信されました！"));
+
+      // 保存フォーマット: { name: "<日本語名>", answers: [{date,answer}, ...] }
+      const payload = { name: userName, answers: answersArray };
+
+      db.ref("events/" + id + "/answers/" + userKey).set(payload)
+        .then(()=> {
+          alert(userName + " さんの回答が送信されました！");
+        })
+        .catch(err => {
+          console.error("保存エラー:", err);
+          alert("保存に失敗しました（コンソール参照）: " + (err && err.message));
+        });
     }
   </script>
 </body>
