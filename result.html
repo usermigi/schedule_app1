@@ -6,8 +6,10 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    body { font-family: sans-serif; max-width: 800px; margin: 2em auto; }
-    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 6px; }
+    body { font-family: sans-serif; max-width: 900px; margin: 2em auto; }
+    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 8px; text-align: center; }
+    th { background:#f6f6f6; }
+    .unanswered { color: #b00; }
   </style>
 </head>
 <body>
@@ -28,44 +30,59 @@
     const db = firebase.database();
     const id = new URLSearchParams(location.search).get("id");
 
+    // decodeKey: URLセーフBase64 -> 日本語
     function decodeKey(str) {
       str = str.replace(/-/g,'+').replace(/_/g,'/');
-      while(str.length % 4) str += '=';
+      while (str.length % 4) str += '=';
       return decodeURIComponent(escape(atob(str)));
     }
 
-    db.ref("events/" + id).once("value").then(snap=>{
-      const event = snap.val();
-      if(!event){
-        document.getElementById("title").textContent = "イベントが見つかりません";
-        return;
-      }
-      document.getElementById("title").textContent = event.name;
+    db.ref("events/" + id).once("value")
+      .then(snap => {
+        const event = snap.val();
+        if (!event) {
+          document.getElementById("title").textContent = "イベントが見つかりません";
+          return;
+        }
+        document.getElementById("title").textContent = event.name;
 
-      const table = document.createElement("table");
-      const header = document.createElement("tr");
-      header.innerHTML = "<th>名前</th>"+event.dates.map(d=>`<th>${d}</th>`).join("");
-      table.appendChild(header);
+        const dates = event.dates || [];
+        // answersData: 配列化された値（各キーの value は {name, answers: [...] }）
+        const answersData = Object.values(event.answers || {});
 
-      const answeredKeys = Object.keys(event.answers||{});
-      const answeredNames = answeredKeys.map(k=>decodeKey(k));
-      const unanswered = event.names.filter(n=>!answeredNames.includes(n));
+        // header
+        const table = document.createElement("table");
+        const header = document.createElement("tr");
+        header.innerHTML = "<th>名前</th>" + dates.map(d => `<th>${d}</th>`).join("");
+        table.appendChild(header);
 
-      event.names.forEach(name=>{
-        const encodedKey = answeredKeys.find(k=>decodeKey(k)===name);
-        const answers = encodedKey ? event.answers[encodedKey] : {};
-        const row = document.createElement("tr");
-        row.innerHTML = `<td>${name}</td>` + event.dates.map(d=>`<td>${answers?.[d]||"-"}</td>`).join("");
-        table.appendChild(row);
+        // 回答者一覧（event.names の順で表示）
+        const answeredNames = answersData.map(a => a.name);
+        const unanswered = (event.names || []).filter(n => !answeredNames.includes(n));
+
+        (event.names || []).forEach(name => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${name}</td>`;
+          const answerObj = answersData.find(a => a.name === name);
+          dates.forEach(date => {
+            const ans = answerObj?.answers?.find(x => x.date === date)?.answer || "-";
+            row.innerHTML += `<td>${ans}</td>`;
+          });
+          table.appendChild(row);
+        });
+
+        document.getElementById("summary").appendChild(table);
+
+        if (unanswered.length) {
+          const p = document.createElement("p");
+          p.innerHTML = `<strong class="unanswered">未回答:</strong> ${unanswered.join('、')}`;
+          document.getElementById("summary").appendChild(p);
+        }
+      })
+      .catch(err => {
+        console.error("読み込み失敗:", err);
+        document.getElementById("title").textContent = "読み込みエラー（コンソール参照）";
       });
-
-      document.getElementById("summary").appendChild(table);
-      if(unanswered.length>0){
-        const un = document.createElement("p");
-        un.innerHTML = "<strong>未回答:</strong> "+unanswered.join("、");
-        document.getElementById("summary").appendChild(un);
-      }
-    });
   </script>
 </body>
 </html>
