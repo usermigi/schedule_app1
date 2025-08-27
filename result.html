@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>回答結果</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 2em auto; }
+    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 6px; }
+  </style>
+</head>
+<body>
+  <h1 id="title">読み込み中...</h1>
+  <div id="summary"></div>
+
+  <script>
+    const firebaseConfig = {
+  apiKey: "AIzaSyCKlrqoZlMhrPKbfqLZS2MvnE5FATH1cBg",
+  authDomain: "schedule-app-abbb3.firebaseapp.com",
+  databaseURL: "https://schedule-app-abbb3-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "schedule-app-abbb3",
+  storageBucket: "schedule-app-abbb3.firebasestorage.app",
+  messagingSenderId: "159076358828",
+  appId: "1:159076358828:web:57c8daa28f29404b79dd09"
+};
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const id = new URLSearchParams(location.search).get("id");
+
+    db.ref("events/" + id).once("value").then(snap => {
+      const event = snap.val();
+      if (!event) {
+        document.getElementById("title").textContent = "イベントが見つかりません";
+        return;
+      }
+      document.getElementById("title").textContent = event.name;
+      const table = document.createElement("table");
+      const header = document.createElement("tr");
+      header.innerHTML = "<th>名前</th>" + event.dates.map(d => `<th>${d}</th>`).join("");
+      table.appendChild(header);
+
+      const answered = Object.keys(event.answers || {});
+      const unanswered = event.names.filter(n => !answered.includes(n));
+      event.names.forEach(name => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${name}</td>` + event.dates.map(d => {
+          return `<td>${event.answers?.[name]?.[d] || "-"}</td>`;
+        }).join("");
+        table.appendChild(row);
+      });
+      document.getElementById("summary").appendChild(table);
+
+      if (unanswered.length > 0) {
+        const un = document.createElement("p");
+        un.innerHTML = "<strong>未回答:</strong> " + unanswered.join("、");
+        document.getElementById("summary").appendChild(un);
+      }
+    });
+  </script>
+</body>
+</html>

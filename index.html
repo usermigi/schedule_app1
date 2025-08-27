@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>イベント作成</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2em auto; }
+    label { display: block; margin-top: 1em; }
+    input, button { width: 100%; padding: 8px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h1>イベント作成</h1>
+  <label>イベント名: <input id="eventName" /></label>
+  <label>候補日（カンマ区切り）: <input id="dates" placeholder="2024-08-01,2024-08-02" /></label>
+  <label>参加者名（カンマ区切り）: <input id="names" placeholder="田中,鈴木,佐藤" /></label>
+  <button onclick="makeEvent()">作成</button>
+  <div id="linkArea" style="margin-top: 2em;"></div>
+
+  <script>
+    const firebaseConfig = {
+  apiKey: "AIzaSyCKlrqoZlMhrPKbfqLZS2MvnE5FATH1cBg",
+  authDomain: "schedule-app-abbb3.firebaseapp.com",
+  databaseURL: "https://schedule-app-abbb3-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "schedule-app-abbb3",
+  storageBucket: "schedule-app-abbb3.firebasestorage.app",
+  messagingSenderId: "159076358828",
+  appId: "1:159076358828:web:57c8daa28f29404b79dd09"
+};
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function makeEvent() {
+      const name = document.getElementById('eventName').value.trim();
+      const dates = document.getElementById('dates').value.split(',').map(d => d.trim());
+      const names = document.getElementById('names').value.split(',').map(n => n.trim());
+      if (!name || dates.length === 0 || names.length === 0) {
+        alert("すべての項目を入力してください");
+        return;
+      }
+      const id = Math.random().toString(36).substring(2, 8);
+      db.ref('events/' + id).set({ name, dates, names, answers: {} });
+      const base = location.origin + location.pathname.replace("index.html", "");
+      const url = base + "event.html?id=" + id;
+      document.getElementById("linkArea").innerHTML = `<p>イベントを作成しました！<br><a href="${url}" target="_blank">${url}</a></p>`;
+    }
+  </script>
+</body>
+</html>
