@@ -29,14 +29,14 @@
     const id = new URLSearchParams(location.search).get("id");
 
     function decodeKey(str) {
-      str = str.replace(/-/g, '+').replace(/_/g, '/');
-      while (str.length % 4) str += '=';
+      str = str.replace(/-/g,'+').replace(/_/g,'/');
+      while(str.length % 4) str += '=';
       return decodeURIComponent(escape(atob(str)));
     }
 
-    db.ref("events/" + id).once("value").then(snap => {
+    db.ref("events/" + id).once("value").then(snap=>{
       const event = snap.val();
-      if (!event) {
+      if(!event){
         document.getElementById("title").textContent = "イベントが見つかりません";
         return;
       }
@@ -44,26 +44,25 @@
 
       const table = document.createElement("table");
       const header = document.createElement("tr");
-      header.innerHTML = "<th>名前</th>" + event.dates.map(d => `<th>${d}</th>`).join("");
+      header.innerHTML = "<th>名前</th>"+event.dates.map(d=>`<th>${d}</th>`).join("");
       table.appendChild(header);
 
-      const answeredKeys = Object.keys(event.answers || {});
-      const answeredNames = answeredKeys.map(k => decodeKey(k));
-      const unanswered = event.names.filter(n => !answeredNames.includes(n));
+      const answeredKeys = Object.keys(event.answers||{});
+      const answeredNames = answeredKeys.map(k=>decodeKey(k));
+      const unanswered = event.names.filter(n=>!answeredNames.includes(n));
 
-      event.names.forEach(name => {
-        const encodedKey = answeredKeys.find(k => decodeKey(k) === name);
+      event.names.forEach(name=>{
+        const encodedKey = answeredKeys.find(k=>decodeKey(k)===name);
         const answers = encodedKey ? event.answers[encodedKey] : {};
         const row = document.createElement("tr");
-        row.innerHTML = `<td>${name}</td>` + event.dates.map(d => `<td>${answers?.[d] || "-"}</td>`).join("");
+        row.innerHTML = `<td>${name}</td>` + event.dates.map(d=>`<td>${answers?.[d]||"-"}</td>`).join("");
         table.appendChild(row);
       });
 
       document.getElementById("summary").appendChild(table);
-
-      if (unanswered.length > 0) {
+      if(unanswered.length>0){
         const un = document.createElement("p");
-        un.innerHTML = "<strong>未回答:</strong> " + unanswered.join("、");
+        un.innerHTML = "<strong>未回答:</strong> "+unanswered.join("、");
         document.getElementById("summary").appendChild(un);
       }
     });
