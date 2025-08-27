@@ -11,6 +11,8 @@
     .choice-group strong { width: 110px; flex: 0 0 110px; }
     .choice-group label { margin-right: 2em; display:flex; align-items:center; gap:0.4em; }
     #resultLink { margin-top: 1.5em; }
+    textarea { width: 100%; min-height: 80px; padding:6px; box-sizing:border-box; margin-top:6px; }
+    .note { margin-top: 12px; color:#333; background:#f8f8f8; padding:8px; border-radius:6px; }
     button { padding: 8px 12px; margin-top: 12px; }
   </style>
 </head>
@@ -22,6 +24,14 @@
   </label>
 
   <form id="form"></form>
+
+  <div style="margin-top:12px;">
+    <label>コメント（任意）:
+      <textarea id="comment" placeholder="調整したいことや補足があれば入力してください"></textarea>
+    </label>
+  </div>
+
+  <div class="note">予定に変更があれば、再度入力および送信してください。</div>
 
   <button id="submitBtn" onclick="submitAnswer()">送信</button>
 
@@ -52,7 +62,6 @@
       return decodeURIComponent(escape(atob(str)));
     }
 
-    // ページ初期化
     (function init(){
       if (!id) {
         document.getElementById("title").textContent = "イベントIDが指定されていません";
@@ -64,7 +73,6 @@
       document.getElementById("resultLink").innerHTML =
         `<p>回答結果はこちら: <a href="${resultUrl}" target="_blank">${resultUrl}</a></p>`;
 
-      // イベント読み込み
       db.ref("events/" + id).once("value")
         .then(snap => {
           const event = snap.val();
@@ -74,7 +82,7 @@
           }
           document.getElementById("title").textContent = event.name;
 
-          // 名前ドロップダウン（value は encodeKey）
+          // 名前ドロップダウン
           const userSel = document.getElementById("user");
           (event.names || []).forEach(name => {
             const opt = document.createElement("option");
@@ -83,7 +91,7 @@
             userSel.appendChild(opt);
           });
 
-          // 日付ごとのラジオを作成
+          // 候補日ラジオ
           const form = document.getElementById("form");
           (event.dates || []).forEach(date => {
             const div = document.createElement("div");
@@ -108,14 +116,13 @@
         });
     })();
 
-    // 送信（answers を配列で保存する）
     function submitAnswer() {
       const form = document.getElementById("form");
       const userKey = document.getElementById("user").value;
       if (!userKey) { alert("名前を選択してください"); return; }
       const userName = decodeKey(userKey);
 
-      // answersArray にする（キーを日付文字列にしない）
+      // answersArray にする（キーに日付を使わない）
       const answersArray = [];
       for (let i=0;i<form.elements.length;i++){
         const el = form.elements[i];
@@ -124,8 +131,10 @@
         }
       }
 
-      // 保存フォーマット: { name: "<日本語名>", answers: [{date,answer}, ...] }
-      const payload = { name: userName, answers: answersArray };
+      const comment = (document.getElementById("comment").value || "").trim();
+
+      // ペイロード： name, answers(array), comment
+      const payload = { name: userName, answers: answersArray, comment: comment };
 
       db.ref("events/" + id + "/answers/" + userKey).set(payload)
         .then(()=> {
