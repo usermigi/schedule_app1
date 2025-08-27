@@ -71,7 +71,6 @@
     function submitAnswer() {
       const form = document.getElementById("form");
       const user = document.getElementById("user").value;
-      const safeUser = encodeURIComponent(user); // Firebaseのキーとして安全にする
       const answers = {};
       for (let i = 0; i < form.elements.length; i++) {
         const el = form.elements[i];
@@ -79,7 +78,12 @@
           answers[el.name] = el.value;
         }
       }
-      db.ref("events/" + id + "/answers/" + safeUser).set(answers).then(() => {
+      // ランダムIDをキーにして名前と回答をオブジェクトとして保存
+      const answerId = Math.random().toString(36).substring(2,8);
+      db.ref("events/" + id + "/answers/" + answerId).set({
+        name: user,
+        answers: answers
+      }).then(() => {
         const base = location.origin + location.pathname.replace("event.html", "");
         const resultURL = base + "result.html?id=" + id;
         document.getElementById("resultLink").innerHTML =
