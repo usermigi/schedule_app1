@@ -41,18 +41,17 @@
       header.innerHTML = "<th>名前</th>" + event.dates.map(d => `<th>${d}</th>`).join("");
       table.appendChild(header);
 
-      // answersオブジェクトはランダムIDをキーにして保存されている
-      const answersData = Object.values(event.answers || {}); // 配列化
+      const answersData = Object.values(event.answers || {});
       const answeredNames = answersData.map(a => a.name);
       const unanswered = event.names.filter(n => !answeredNames.includes(n));
 
-      // 各参加者の行を作成
       event.names.forEach(name => {
         const row = document.createElement("tr");
         let rowHtml = `<td>${name}</td>`;
         const answerObj = answersData.find(a => a.name === name);
         event.dates.forEach(date => {
-          rowHtml += `<td>${answerObj?.answers?.[date] || "-"}</td>`;
+          const ans = answerObj?.answers.find(a => a.date === date)?.answer || "-";
+          rowHtml += `<td>${ans}</td>`;
         });
         row.innerHTML = rowHtml;
         table.appendChild(row);
