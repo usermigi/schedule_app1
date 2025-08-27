@@ -7,14 +7,9 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
     body { font-family: sans-serif; max-width: 600px; margin: 2em auto; }
-    .choice-group { margin-bottom: 1em; display: flex; gap: 1em; align-items: center; }
-    .choice-group label {
-      display: flex;
-      align-items: center;
-      gap: 0.5em;       /* ボタンと文字の間隔 */
-      margin-right: 2em; /* ◯・△・× の間隔を広げる */
-    }
-    #resultLink { margin-top: 1.5em; }
+    .choice-group { margin-bottom: 1.5em; }
+    .choice-group label { margin-right: 2em; } /* 選択肢と選択肢の間隔を広げる */
+    #resultLink { margin-top: 2em; }
   </style>
 </head>
 <body>
@@ -24,15 +19,16 @@
   </label>
   <form id="form"></form>
   <button onclick="submitAnswer()">送信</button>
+
   <div id="resultLink"></div>
 
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCKlrqoZlMhrPKbfqLZS2MvnE5FATH1cBg",
       authDomain: "schedule-app-abbb3.firebaseapp.com",
-      databaseURL: "https://schedule-app-abbb3-default-rtdb.asia-southeast1.firebasedatabase.app", // ← 修正済み
+      databaseURL: "https://schedule-app-abbb3-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "schedule-app-abbb3",
-      storageBucket: "schedule-app-abbb3.appspot.com",
+      storageBucket: "schedule-app-abbb3.firebasestorage.app",
       messagingSenderId: "159076358828",
       appId: "1:159076358828:web:57c8daa28f29404b79dd09"
     };
@@ -40,8 +36,13 @@
     const db = firebase.database();
     const id = new URLSearchParams(location.search).get("id");
 
-    const resultUrl = location.origin + location.pathname.replace("event.html", "") + "result.html?id=" + id;
-    document.getElementById("resultLink").innerHTML = `<p>回答結果はこちら: <a href="${resultUrl}" target="_blank">${resultUrl}</a></p>`;
+    // 🔑 名前をエンコード/デコード
+    function encodeKey(str) {
+      return btoa(unescape(encodeURIComponent(str)));
+    }
+    function decodeKey(str) {
+      return decodeURIComponent(escape(atob(str)));
+    }
 
     db.ref("events/" + id).once("value").then(snap => {
       const event = snap.val();
@@ -50,13 +51,17 @@
         return;
       }
       document.getElementById("title").textContent = event.name;
+
+      // 名前のドロップダウン
       const userSel = document.getElementById("user");
       event.names.forEach(name => {
         const opt = document.createElement("option");
-        opt.value = encodeURIComponent(name); // Firebase用に安全化
+        opt.value = encodeKey(name); // 🔑 保存用はBase64
         opt.textContent = name;
         userSel.appendChild(opt);
       });
+
+      // 候補日ごとのラジオボタン
       const form = document.getElementById("form");
       event.dates.forEach(date => {
         const div = document.createElement("div");
@@ -74,13 +79,18 @@
         });
         form.appendChild(div);
       });
+
+      // 結果ページのリンクを常に表示
+      const base = location.origin + location.pathname.replace("event.html", "");
+      const resultUrl = base + "result.html?id=" + id;
+      document.getElementById("resultLink").innerHTML =
+        `<p>回答結果はこちら: <a href="${resultUrl}" target="_blank">${resultUrl}</a></p>`;
     });
 
     function submitAnswer() {
       const form = document.getElementById("form");
-      const userRaw = document.getElementById("user").value;
-      const user = decodeURIComponent(userRaw); // 表示名用に戻す
-      const safeUser = encodeURIComponent(user); // Firebase保存用キー
+      const userKey = document.getElementById("user").value;
+      const userName = decodeKey(userKey); // 表示用
       const answers = {};
       for (let i = 0; i < form.elements.length; i++) {
         const el = form.elements[i];
@@ -88,8 +98,8 @@
           answers[el.name] = el.value;
         }
       }
-      db.ref("events/" + id + "/answers/" + safeUser).set(answers).then(() => {
-        alert("送信されました！");
+      db.ref("events/" + id + "/answers/" + userKey).set(answers).then(() => {
+        alert(userName + " さんの回答が送信されました！");
       });
     }
   </script>
