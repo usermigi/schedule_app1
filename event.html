@@ -1,101 +1,97 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<title>日程回答</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<style>
-body { font-family: sans-serif; max-width: 600px; margin: 2em auto; }
-.choice-group { margin-bottom: 1em; display: flex; gap: 1em; align-items: center; }
-.choice-group label { display: flex; align-items: center; gap: 0.3em; } /* ラジオと文字を近づける */
-#resultLink { margin-top: 1em; font-weight: bold; }
-</style>
+  <meta charset="UTF-8" />
+  <title>日程回答</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2em auto; }
+    .choice-group { margin-bottom: 1em; display: flex; gap: 1em; align-items: center; }
+    .choice-group label {
+      display: flex;
+      align-items: center;
+      gap: 0.5em;       /* ボタンと文字の間隔 */
+      margin-right: 2em; /* ◯・△・× の間隔を広げる */
+    }
+    #resultLink { margin-top: 1.5em; }
+  </style>
 </head>
 <body>
-<h1 id="title">読み込み中...</h1>
-<label>あなたの名前:
-  <select id="user"></select>
-</label>
-<form id="form"></form>
-<button onclick="submitAnswer()">送信</button>
-<div id="resultLink"></div>
+  <h1 id="title">読み込み中...</h1>
+  <label>あなたの名前:
+    <select id="user"></select>
+  </label>
+  <form id="form"></form>
+  <button onclick="submitAnswer()">送信</button>
+  <div id="resultLink"></div>
 
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCKlrqoZlMhrPKbfqLZS2MvnE5FATH1cBg",
-  authDomain: "schedule-app-abbb3.firebaseapp.com",
-  databaseURL: "https://schedule-app-abbb3-default-rtdb.asia-southeast1.firebasedatabase.app", // ← ここを修正！
-  projectId: "schedule-app-abbb3",
-  storageBucket: "schedule-app-abbb3.appspot.com",
-  messagingSenderId: "159076358828",
-  appId: "1:159076358828:web:57c8daa28f29404b79dd09"
-};
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCKlrqoZlMhrPKbfqLZS2MvnE5FATH1cBg",
+      authDomain: "schedule-app-abbb3.firebaseapp.com",
+      databaseURL: "https://schedule-app-abbb3-default-rtdb.asia-southeast1.firebasedatabase.app", // ← 修正済み
+      projectId: "schedule-app-abbb3",
+      storageBucket: "schedule-app-abbb3.appspot.com",
+      messagingSenderId: "159076358828",
+      appId: "1:159076358828:web:57c8daa28f29404b79dd09"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const id = new URLSearchParams(location.search).get("id");
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const id = new URLSearchParams(location.search).get("id");
+    const resultUrl = location.origin + location.pathname.replace("event.html", "") + "result.html?id=" + id;
+    document.getElementById("resultLink").innerHTML = `<p>回答結果はこちら: <a href="${resultUrl}" target="_blank">${resultUrl}</a></p>`;
 
-const base = location.origin + location.pathname.replace("event.html", "");
-const resultURL = base + "result.html?id=" + id;
-// 最初から結果URL表示
-document.getElementById("resultLink").innerHTML =
-  `結果ページはこちら：<a href="${resultURL}" target="_blank">${resultURL}</a>`;
-
-db.ref("events/" + id).once("value").then(snap => {
-  const event = snap.val();
-  if (!event) {
-    document.getElementById("title").textContent = "イベントが見つかりません";
-    return;
-  }
-  document.getElementById("title").textContent = event.name;
-  const userSel = document.getElementById("user");
-  event.names.forEach(name => {
-    const opt = document.createElement("option");
-    opt.value = name;
-    opt.textContent = name;
-    userSel.appendChild(opt);
-  });
-  const form = document.getElementById("form");
-  event.dates.forEach(date => {
-    const div = document.createElement("div");
-    div.className = "choice-group";
-    const label = document.createElement("strong");
-    label.textContent = date + ":";
-    div.appendChild(label);
-    ["◯", "△", "×"].forEach(opt => {
-      const subLabel = document.createElement("label");
-      const radio = document.createElement("input");
-      radio.type = "radio"; radio.name = date; radio.value = opt;
-      subLabel.appendChild(radio);
-      subLabel.append(opt);
-      div.appendChild(subLabel);
+    db.ref("events/" + id).once("value").then(snap => {
+      const event = snap.val();
+      if (!event) {
+        document.getElementById("title").textContent = "イベントが見つかりません";
+        return;
+      }
+      document.getElementById("title").textContent = event.name;
+      const userSel = document.getElementById("user");
+      event.names.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = encodeURIComponent(name); // Firebase用に安全化
+        opt.textContent = name;
+        userSel.appendChild(opt);
+      });
+      const form = document.getElementById("form");
+      event.dates.forEach(date => {
+        const div = document.createElement("div");
+        div.className = "choice-group";
+        const label = document.createElement("strong");
+        label.textContent = date + ":";
+        div.appendChild(label);
+        ["◯", "△", "×"].forEach(opt => {
+          const subLabel = document.createElement("label");
+          const radio = document.createElement("input");
+          radio.type = "radio"; radio.name = date; radio.value = opt;
+          subLabel.appendChild(radio);
+          subLabel.append(opt);
+          div.appendChild(subLabel);
+        });
+        form.appendChild(div);
+      });
     });
-    form.appendChild(div);
-  });
-});
 
-function submitAnswer() {
-  const form = document.getElementById("form");
-  const user = document.getElementById("user").value;
-  const answersArray = [];
-  for (let i = 0; i < form.elements.length; i++) {
-    const el = form.elements[i];
-    if (el.checked) {
-      answersArray.push({ date: el.name, answer: el.value });
+    function submitAnswer() {
+      const form = document.getElementById("form");
+      const userRaw = document.getElementById("user").value;
+      const user = decodeURIComponent(userRaw); // 表示名用に戻す
+      const safeUser = encodeURIComponent(user); // Firebase保存用キー
+      const answers = {};
+      for (let i = 0; i < form.elements.length; i++) {
+        const el = form.elements[i];
+        if (el.checked) {
+          answers[el.name] = el.value;
+        }
+      }
+      db.ref("events/" + id + "/answers/" + safeUser).set(answers).then(() => {
+        alert("送信されました！");
+      });
     }
-  }
-  const answerId = Math.random().toString(36).substring(2,8);
-  db.ref("events/" + id + "/answers/" + answerId).set({
-    name: user,
-    answers: answersArray
-  }).then(() => {
-    alert("送信されました！");
-  }).catch(err => {
-    console.error(err);
-    alert("送信に失敗しました: " + err.message);
-  });
-}
-</script>
+  </script>
 </body>
 </html>
