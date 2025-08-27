@@ -8,7 +8,7 @@
   <style>
     body { font-family: sans-serif; max-width: 600px; margin: 2em auto; }
     .choice-group { margin-bottom: 1.5em; }
-    .choice-group label { margin-right: 2em; } /* 選択肢と選択肢の間隔 */
+    .choice-group label { margin-right: 2em; } /* 選択肢間隔 */
     #resultLink { margin-top: 2em; }
   </style>
 </head>
@@ -39,9 +39,9 @@
     // 🔑 URLセーフ Base64 エンコード/デコード
     function encodeKey(str) {
       return btoa(unescape(encodeURIComponent(str)))
-             .replace(/\+/g, '-')  // + → -
-             .replace(/\//g, '_')  // / → _
-             .replace(/=+$/, '');  // = 削除
+             .replace(/\+/g, '-')   // + → -
+             .replace(/\//g, '_')   // / → _
+             .replace(/=+$/, '');   // = 削除
     }
     function decodeKey(str) {
       str = str.replace(/-/g, '+').replace(/_/g, '/');
@@ -57,16 +57,16 @@
       }
       document.getElementById("title").textContent = event.name;
 
-      // 名前のドロップダウン
+      // 名前ドロップダウン
       const userSel = document.getElementById("user");
       event.names.forEach(name => {
         const opt = document.createElement("option");
-        opt.value = encodeKey(name); // 🔑 保存用はURLセーフBase64
+        opt.value = encodeKey(name);
         opt.textContent = name;
         userSel.appendChild(opt);
       });
 
-      // 候補日ごとのラジオボタン
+      // 候補日ラジオ
       const form = document.getElementById("form");
       event.dates.forEach(date => {
         const div = document.createElement("div");
@@ -85,7 +85,7 @@
         form.appendChild(div);
       });
 
-      // 結果ページリンクを最初から表示
+      // 結果ページリンク
       const base = location.origin + location.pathname.replace("event.html", "");
       const resultUrl = base + "result.html?id=" + id;
       document.getElementById("resultLink").innerHTML =
@@ -95,17 +95,14 @@
     function submitAnswer() {
       const form = document.getElementById("form");
       const userKey = document.getElementById("user").value;
-      const userName = decodeKey(userKey); // 表示用
+      const userName = decodeKey(userKey);
       const answers = {};
       for (let i = 0; i < form.elements.length; i++) {
         const el = form.elements[i];
-        if (el.checked) {
-          answers[el.name] = el.value;
-        }
+        if (el.checked) answers[el.name] = el.value;
       }
-      db.ref("events/" + id + "/answers/" + userKey).set(answers).then(() => {
-        alert(userName + " さんの回答が送信されました！");
-      });
+      db.ref("events/" + id + "/answers/" + userKey).set(answers)
+        .then(() => alert(userName + " さんの回答が送信されました！"));
     }
   </script>
 </body>
