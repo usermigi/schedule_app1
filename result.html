@@ -28,8 +28,10 @@
     const db = firebase.database();
     const id = new URLSearchParams(location.search).get("id");
 
-    // 🔑 エンコード/デコード関数
+    // 🔑 URLセーフ Base64 デコード
     function decodeKey(str) {
+      str = str.replace(/-/g, '+').replace(/_/g, '/');
+      while (str.length % 4) str += '=';
       return decodeURIComponent(escape(atob(str)));
     }
 
@@ -40,6 +42,7 @@
         return;
       }
       document.getElementById("title").textContent = event.name;
+
       const table = document.createElement("table");
       const header = document.createElement("tr");
       header.innerHTML = "<th>名前</th>" + event.dates.map(d => `<th>${d}</th>`).join("");
@@ -49,7 +52,6 @@
       const answeredNames = answeredKeys.map(k => decodeKey(k));
       const unanswered = event.names.filter(n => !answeredNames.includes(n));
 
-      // 回答済み・未回答を表示
       event.names.forEach(name => {
         const encodedKey = answeredKeys.find(k => decodeKey(k) === name);
         const row = document.createElement("tr");
