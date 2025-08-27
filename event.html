@@ -71,18 +71,18 @@
     function submitAnswer() {
       const form = document.getElementById("form");
       const user = document.getElementById("user").value;
-      const answers = {};
+      const answersArray = [];
       for (let i = 0; i < form.elements.length; i++) {
         const el = form.elements[i];
         if (el.checked) {
-          answers[el.name] = el.value;
+          // 日付は配列で保存
+          answersArray.push({ date: el.name, answer: el.value });
         }
       }
-      // ランダムIDをキーにして名前と回答をオブジェクトとして保存
       const answerId = Math.random().toString(36).substring(2,8);
       db.ref("events/" + id + "/answers/" + answerId).set({
         name: user,
-        answers: answers
+        answers: answersArray
       }).then(() => {
         const base = location.origin + location.pathname.replace("event.html", "");
         const resultURL = base + "result.html?id=" + id;
