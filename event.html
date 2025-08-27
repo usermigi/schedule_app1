@@ -25,12 +25,13 @@ body { font-family: sans-serif; max-width: 600px; margin: 2em auto; }
 const firebaseConfig = {
   apiKey: "AIzaSyCKlrqoZlMhrPKbfqLZS2MvnE5FATH1cBg",
   authDomain: "schedule-app-abbb3.firebaseapp.com",
-  databaseURL: "https://schedule-app-abbb3-default-rtdb.firebaseio.com", // 修正版
+  databaseURL: "https://schedule-app-abbb3-default-rtdb.asia-southeast1.firebasedatabase.app", // ← ここを修正！
   projectId: "schedule-app-abbb3",
   storageBucket: "schedule-app-abbb3.appspot.com",
   messagingSenderId: "159076358828",
   appId: "1:159076358828:web:57c8daa28f29404b79dd09"
 };
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const id = new URLSearchParams(location.search).get("id");
